@@ -146,82 +146,27 @@ chmod 700 ~/.gnupg
 pipx install keepassxc 2>/dev/null || sudo apt install -y keepassxc
 
 ###############################################################################
-# VERACRYPT instalacja przez apt
-echo "[7/7] Instalacja aplikacji..."
+# INSTALACJA APPS - Flatpak
+echo "[7/7] Instalacja aplikacji (Flatpak)..."
 
-# VeraCrypt - Flatpak nie zawsze dostępny, używamy apt
-sudo apt install -y veracrypt 2>/dev/null || {
-    echo "VeraCrypt przez Flatpak..."
-    sudo flatpak install flathub org.virbox.virboxcrypt -y 2>/dev/null || true
-}
+# Obsidian
+sudo flatpak install flathub md.obsidian.Obsidian -y
 
-###############################################################################
-# INSTALACJA MONERO GUI WALLET
-###############################################################################
-echo "Pobieranie Monero GUI Wallet..."
-# Monero - przez apt (domyślnie z deb repo w Debian)
-sudo apt install -y monero-gui monero-cli 2>/dev/null || {
-    echo "Monero przez GitHub release..."
-    MONERO_RELEASE="v0.18.4.6"
-    MONERO_URL="https://github.com/monero-project/monero/releases/download/$MONERO_RELEASE/monero-gui-linux-x64-v$MONERO_RELEASE.tar.bz2"
-    wget "$MONERO_URL" -O /tmp/monero-gui.tar.bz2
-    tar -xjf /tmp/monero-gui.tar.bz2 -C /opt/
-    echo "Monero GUI zainstalowane."
-}
+# Cryptomator (zamiast VeraCrypt - niedostępny na Debian 13)
+sudo flatpak install flathub org.cryptomator.Cryptomator -y
 
-###############################################################################
-# INSTALACJA SESSION MESSENGER
-###############################################################################
-# Reszta aplikacji instalowana w tej sekcji
-
-# Amnezia VPN - Client dla szyfrowanych tuneli
-# Pobieranie latest release z GitHub
-echo "Instalacja Amnezia VPN..."
-AMNEZIA_URL="https://github.com/amnezia-vpn/amnezia-desktop/releases/latest/download/amnezia.deb"
-wget "$AMNEZIA_URL" -O /tmp/amnezia.deb 2>/dev/null || {
-    echo "Pobieranie z alternatywnej source..."
-    curl -sL https://api.github.com/repos/amnezia-vpn/amnezia-desktop/releases/latest | grep "browser_download.*deb" | head -1 | cut -d '"' -f 4 | xargs wget -O /tmp/amnezia.deb
-}
-sudo dpkg -i /tmp/amnezia.deb
-sudo apt install -f -y
-rm -f /tmp/amnezia.deb
-
-echo "Amnezia VPN zainstalowany."
+# Monero GUI
+sudo flatpak install flathub org.getmonero.Monero -y
 
 # Session - Flatpak
-sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 sudo flatpak install flathub network.loki.Session -y
 
-###############################################################################
-# INSTALACJA AMNEZIA WIKI
-########################################################################
-echo "Instalacja Amnezia Wiki..."
+# OnionShare
+sudo flatpak install flathub org.onionshare.OnionShare -y
 
-# Amnezia Wiki - Flatpak
-sudo flatpak install flathub org.amnezia.wiki -y 2>/dev/null || {
-    echo "Amnezia Wiki nie dostępna przez Flatpak, pobieranie z GitHub..."
-    wget -q https://github.com/amnezia-vpn/amnezia-wiki/releases/latest/download/amnezia-wiki.AppImage -O /opt/amnezia-wiki.AppImage
-    chmod +x /opt/amnezia-wiki.AppImage
-    ln -sf /opt/amnezia-wiki.AppImage /usr/local/bin/amnezia-wiki
-}
+# Brak Amnezia VPN - nie dostępne w repozytoriach Linux
 
-###############################################################################
-# INSTALACJA ONIONSHARE
-###############################################################################
-pipx install onionshare 2>/dev/null || sudo flatpak install flathub org.onionshare.OnionShare -y
-
-###############################################################################
-# INSTALACJA TOR BROWSER
-###############################################################################
-echo "Instalacja Tor Browser..."
-
-sudo apt install -y torbrowser-launcher
-
-###############################################################################
-# INSTALACJA BRAVE BROWSER
-###############################################################################
 # Instalacja Brave Browser
-echo "Instalacja Brave Browser..."
 
 wget -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg --no-check-certificate
 echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main" | sudo tee /etc/apt/sources.list.d/brave-browser-release.list
@@ -405,9 +350,6 @@ HELP
         echo "Zatrzymywanie usługi Tor..."
         sudo systemctl stop tor
         echo "Tor zatrzymany."
-        ;;
-    status-tor)
-        sudo systemctl status tor
         ;;
     start-session)
         echo "Uruchamianie Session..."
