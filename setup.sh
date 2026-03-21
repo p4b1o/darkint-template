@@ -220,9 +220,10 @@ sudo apt install -y torbrowser-launcher
 ###############################################################################
 # INSTALACJA BRAVE BROWSER
 ###############################################################################
+# Instalacja Brave Browser
 echo "Instalacja Brave Browser..."
 
-curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+wget -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg --no-check-certificate
 echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main" | sudo tee /etc/apt/sources.list.d/brave-browser-release.list
 sudo apt update
 sudo apt install -y brave-browser
