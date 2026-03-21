@@ -146,29 +146,28 @@ chmod 700 ~/.gnupg
 pipx install keepassxc 2>/dev/null || sudo apt install -y keepassxc
 
 ###############################################################################
-# INSTALACJA VERACRYPT (SZYFROWANIE DYSKÓW)
-###############################################################################
+# VERACRYPT instalacja przez apt
 echo "[7/7] Instalacja aplikacji..."
 
-wget -q https://launchpad.net/veracrypt/trunk/1.26.7/+download/veracrypt-1.26.7-setup.tar.xz -O /tmp/veracrypt.tar.xz
-tar -xf /tmp/veracrypt.tar.xz -C /tmp/
-cd /tmp/veracrypt-*/
-sudo ./veracrypt-installer --install --skip-gpg-checks
-cd ~
-rm -rf /tmp/veracrypt* 
+# VeraCrypt - Flatpak nie zawsze dostępny, używamy apt
+sudo apt install -y veracrypt 2>/dev/null || {
+    echo "VeraCrypt przez Flatpak..."
+    sudo flatpak install flathub org.virbox.virboxcrypt -y 2>/dev/null || true
+}
 
 ###############################################################################
 # INSTALACJA MONERO GUI WALLET
 ###############################################################################
 echo "Pobieranie Monero GUI Wallet..."
-MONERO_RELEASE="v0.18.3.4"
-MONERO_URL="https://github.com/monero-project/monero/releases/download/$MONERO_RELEASE/monero-gui-linux-x64-v$MONERO_RELEASE.tar.bz2"
-
-wget "$MONERO_URL" -O /tmp/monero-gui.tar.bz2
-tar -xjf /tmp/monero-gui.tar.bz2 -C /opt/
-sudo mv /opt/monero-gui-linux-x64/monero-wallet-gui.desktop /usr/share/applications/monero-wallet-gui.desktop
-sudo mv /opt/monero-gui-linux-x64/monero-wallet-gui.desktop /usr/share/applications/
-echo "Monero GUI zainstalowane. Ścieżka: /opt/monero-gui-linux-x64/"
+# Monero - przez apt (domyślnie z deb repo w Debian)
+sudo apt install -y monero-gui monero-cli 2>/dev/null || {
+    echo "Monero przez GitHub release..."
+    MONERO_RELEASE="v0.18.4.6"
+    MONERO_URL="https://github.com/monero-project/monero/releases/download/$MONERO_RELEASE/monero-gui-linux-x64-v$MONERO_RELEASE.tar.bz2"
+    wget "$MONERO_URL" -O /tmp/monero-gui.tar.bz2
+    tar -xjf /tmp/monero-gui.tar.bz2 -C /opt/
+    echo "Monero GUI zainstalowane."
+}
 
 ###############################################################################
 # INSTALACJA SESSION MESSENGER
