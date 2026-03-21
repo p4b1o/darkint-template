@@ -1,0 +1,15 @@
+*.log
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.bak
+*.tmp
+*.tgz
+*.tar.gz
+*.tar.xz
+*.tar.bz2
+*.zip
+monero-blockchain*
+*.db
+*.db-journal
