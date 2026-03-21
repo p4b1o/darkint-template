@@ -3,98 +3,253 @@
 ###############################################################################
 # SPRAWDZENIE XFCE
 ###############################################################################
-if [ -z "$XDG_CURRENT_DESKTOP" ] || [[ "$XDG_CURRENT_DESKTOP" != *"XFCE"* ]]; then
-    echo "Błąd: To skrypt wymaga środowiska XFCE."
-    echo "Wyloguj się i wybierz XFCE przed uruchomieniem skryptu."
+# Sprawdź czy XFCE jest zainstalowane (działa też przez SSH)
+if ! command -v xfconf-query &>/dev/null; then
+    echo "Blad: xfconf-query nie znaleziony. Zainstaluj XFCE przed uruchomieniem skryptu."
     exit 1
 fi
 
-echo "Środowisko XFCE wykryte. Rozpoczynanie instalacji..."
+echo "XFCE wykryte. Rozpoczynanie instalacji..."
+
+###############################################################################
+# NAPRAWA LOCALE
+###############################################################################
+echo "[1/9] Naprawa locale..."
+sudo sed -i '/^# *en_US.UTF-8/s/^# *//' /etc/locale.gen 2>/dev/null || true
+sudo locale-gen en_US.UTF-8 2>/dev/null || true
 
 ###############################################################################
 # AKTUALIZACJA I CZYSZCZENIE
 ###############################################################################
-echo "[1/7] Aktualizacja systemu..."
+echo "[2/9] Aktualizacja systemu..."
 sudo apt clean
 sudo apt update && sudo apt upgrade -y
 
 ###############################################################################
-# INSTALACJA PODSTAWOWYCH NARZĘDZI
+# INSTALACJA PODSTAWOWYCH NARZEDZI
 ###############################################################################
-echo "[2/7] Instalacja podstawowych narzędzi..."
-sudo apt install -y wget curl git build-essential python3-pip flatpak unzip python3-venv xsettingsd
+echo "[3/9] Instalacja podstawowych narzedzi..."
+sudo apt install -y wget curl git build-essential python3-pip flatpak unzip python3-venv xsettingsd gnome-themes-extra adwaita-icon-theme
 
-# Naprawa EXTERNALLY-MANAGED dla Python 3.11+
-if [ -f /usr/lib/python3.11/EXTERNALLY-MANAGED ]; then
-    sudo rm /usr/lib/python3.11/EXTERNALLY-MANAGED
+# Naprawa EXTERNALLY-MANAGED dla dowolnej wersji Python 3
+EXTERNALLY_MANAGED=$(find /usr/lib/python3* -name "EXTERNALLY-MANAGED" 2>/dev/null | head -1)
+if [ -n "$EXTERNALLY_MANAGED" ]; then
+    sudo rm "$EXTERNALLY_MANAGED"
 fi
 
 ###############################################################################
 # INSTALACJA I KONFIGURACJA pipx
 ###############################################################################
-echo "[3/7] Konfiguracja pipx..."
+echo "[4/9] Konfiguracja pipx..."
 sudo apt install -y pipx
 pipx ensurepath
 export PATH="$HOME/.local/bin:$PATH"
 
 ###############################################################################
-# KONFIGURACJA XFCE
+# KONFIGURACJA XFCE - MOTYW CIEMNY
 ###############################################################################
-echo "[4/7] Konfiguracja XFCE..."
+echo "[5/9] Konfiguracja XFCE..."
 
-# Instalacja ciemnego motywu Adwaita-dark
-sudo apt install -y gtk-theme-switch adwaita-icon-theme
+# Ciemny motyw XFCE - xfconf
+xfconf-query -c xsettings -p /Net/ThemeName -s "Adwaita-dark" --create -t string 2>/dev/null || true
+xfconf-query -c xsettings -p /Net/IconThemeName -s "Adwaita" --create -t string 2>/dev/null || true
+xfconf-query -c xfwm4 -p /general/theme -s "Adwaita-dark" --create -t string 2>/dev/null || true
+xfconf-query -c xfwm4 -p /general/title_alignment -s "center" --create -t string 2>/dev/null || true
+
+# GTK-3 dark theme (plik konfiguracyjny - dziala niezaleznie od xfconf)
+mkdir -p ~/.config/gtk-3.0
+cat > ~/.config/gtk-3.0/settings.ini << 'GTKCONFIG'
+[Settings]
+gtk-theme-name=Adwaita-dark
+gtk-icon-theme-name=Adwaita
+gtk-font-name=Sans 10
+gtk-cursor-theme-name=Adwaita
+gtk-application-prefer-dark-theme=1
+GTKCONFIG
+
+# GTK-2 dark theme
+cat > ~/.gtkrc-2.0 << 'GTK2CONFIG'
+gtk-theme-name="Adwaita-dark"
+gtk-icon-theme-name="Adwaita"
+gtk-font-name="Sans 10"
+GTK2CONFIG
 
 ###############################################################################
-# TŁO PULPITU XFCE
+# TLO PULPITU XFCE
 ###############################################################################
-echo "Pobieranie i ustawianie tła pulpitu..."
+echo "Pobieranie i ustawianie tla pulpitu..."
 
-# Pobranie tła z GitHub repo
-cd ~
-wget -O "$HOME/desktop.png" "https://raw.githubusercontent.com/p4b1o/darkint-template/main/desktop.png" 2>/dev/null || {
-    echo "Nie udało się pobrać tła z GitHub."
+# Pobranie tla z GitHub repo
+wget -q -O "$HOME/desktop.png" "https://raw.githubusercontent.com/p4b1o/darkint-template/main/desktop.png" 2>/dev/null || {
+    echo "Nie udalo sie pobrac tla z GitHub."
 }
 
-# Pobranie nazwy podłączonego monitora (wymagane w XFCE)
-MONITOR=$(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep "workspace0/last-image" | head -n 1 | cut -d' ' -f1)
-
 if [ -f "$HOME/desktop.png" ]; then
-    if [ -n "$MONITOR" ]; then
-        # Ustaw tło dla wykrytego monitora
-        xfconf-query -c xfce4-desktop -p "$MONITOR" -s "$HOME/desktop.png" 2>/dev/null || true
+    # Ustaw tapete na wszystkich istniejacych properties
+    for PROP in $(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep "last-image"); do
+        xfconf-query -c xfce4-desktop -p "$PROP" -s "$HOME/desktop.png" 2>/dev/null || true
+    done
+    for PROP in $(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep "image-path"); do
+        xfconf-query -c xfce4-desktop -p "$PROP" -s "$HOME/desktop.png" 2>/dev/null || true
+    done
+    for PROP in $(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep "image-style"); do
+        xfconf-query -c xfce4-desktop -p "$PROP" -s 5 2>/dev/null || true
+    done
+
+    # Wykryj prawdziwa nazwe monitora z xrandr i ustaw tapete
+    MONITOR_NAME=$(xrandr --query 2>/dev/null | grep " connected" | head -1 | awk '{print $1}')
+    if [ -n "$MONITOR_NAME" ]; then
+        xfconf-query -c xfce4-desktop -p "/backdrop/screen0/monitor${MONITOR_NAME}/workspace0/last-image" \
+            -s "$HOME/desktop.png" --create -t string 2>/dev/null || true
+        xfconf-query -c xfce4-desktop -p "/backdrop/screen0/monitor${MONITOR_NAME}/workspace0/image-style" \
+            -s 5 --create -t int 2>/dev/null || true
+        xfconf-query -c xfce4-desktop -p "/backdrop/screen0/monitor${MONITOR_NAME}/workspace0/image-show" \
+            -s true --create -t bool 2>/dev/null || true
     fi
-    
-    # Fallback - jeśli nie wykryto monitora
-    xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitorVirtual1/workspace0/last-image -s "file://$HOME/desktop.png" --create -t string 2>/dev/null || true
-    xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitorVirtual1/workspace0/image-style -s 5 --create -t int 2>/dev/null || true
+
+    echo "Tapeta ustawiona."
 fi
+
+# Skrypt autostartu tapety - wykrywa monitor dynamicznie (RDP/VNC/lokalna konsola)
+mkdir -p ~/bin
+cat > ~/bin/set-wallpaper << 'SETWALLPAPER'
+#!/bin/bash
+sleep 3
+MONITOR=$(xrandr --query 2>/dev/null | grep " connected" | head -1 | awk '{print $1}')
+if [ -n "$MONITOR" ] && [ -f "$HOME/desktop.png" ]; then
+    xfconf-query -c xfce4-desktop -p "/backdrop/screen0/monitor${MONITOR}/workspace0/last-image" \
+        -s "$HOME/desktop.png" --create -t string 2>/dev/null
+    xfconf-query -c xfce4-desktop -p "/backdrop/screen0/monitor${MONITOR}/workspace0/image-style" \
+        -s 5 --create -t int 2>/dev/null
+    xfconf-query -c xfce4-desktop -p "/backdrop/screen0/monitor${MONITOR}/workspace0/image-show" \
+        -s true --create -t bool 2>/dev/null
+    xfdesktop --quit 2>/dev/null
+    sleep 1
+    xfdesktop &
+fi
+SETWALLPAPER
+chmod +x ~/bin/set-wallpaper
+
+mkdir -p ~/.config/autostart
+cat > ~/.config/autostart/set-wallpaper.desktop << 'WPDESKTOP'
+[Desktop Entry]
+Type=Application
+Name=Set Wallpaper
+Exec=/home/darkint/bin/set-wallpaper
+Terminal=false
+Hidden=false
+X-GNOME-Autostart-enabled=true
+WPDESKTOP
 
 # Ustawienia panelu XFCE - ukrycie, minimalistyczny
 xfconf-query -c xfce4-panel -p /panels/panel-1/autohide -s true 2>/dev/null || true
 xfconf-query -c xfce4-panel -p /panels/panel-1/position -s "p=6;x=0;y=0" 2>/dev/null || true
 xfconf-query -c xfce4-panel -p /panels/panel-1/size -s 28 2>/dev/null || true
 
-# Wyłączenie suspend
+# Aktualizacja cache ikon
+sudo update-desktop-database 2>/dev/null || true
+
+# Wylaczenie suspend
 sudo systemctl mask suspend.target
 
-# Ciemny motyw XFCE
-xfconf-query -c xfce4-appearance -p /style/Name -s "Adwaita-dark" 2>/dev/null || true
-xfconf-query -c xfce4-appearance -p /IconThemeName -s "Adwaita" 2>/dev/null || true
-xfconf-query -c xsettings -p /Net/ThemeName -s "Adwaita-dark" --create -t string 2>/dev/null || true
-xfconf-query -c xsettings -p /Net/IconThemeName -s "Adwaita" --create -t string 2>/dev/null || true
-xfconf-query -c xfwm4 -p /general/theme -s "Adwaita-dark" --create -t string 2>/dev/null || true
-xfconf-query -c xfwm4 -p /general/title_alignment -s "center" --create -t string 2>/dev/null || true
+###############################################################################
+# OCHRONA ROUTINGU LAN (przed VPN)
+###############################################################################
+echo "Konfiguracja ochrony routingu LAN..."
+
+cat <<'LANROUTE' | sudo tee /usr/local/bin/lan-route-protect >/dev/null
+#!/bin/bash
+# Chroni routing LAN przed przejciem przez VPN
+LAN_IF=$(ip route | grep 'default' | head -1 | awk '{print $5}')
+LAN_GW=$(ip route | grep 'default' | head -1 | awk '{print $3}')
+LAN_NET=$(ip -4 addr show $LAN_IF 2>/dev/null | grep inet | awk '{print $2}')
+
+if [ -n "$LAN_IF" ] && [ -n "$LAN_GW" ] && [ -n "$LAN_NET" ]; then
+    LAN_SUBNET=$(echo $LAN_NET | cut -d'/' -f1 | sed 's/\.[0-9]*$/.0/')/24
+    LAN_IP=$(echo $LAN_NET | cut -d'/' -f1)
+    ip route replace $LAN_SUBNET dev $LAN_IF src $LAN_IP metric 50 2>/dev/null
+    ip rule add to $LAN_SUBNET table main prio 100 2>/dev/null
+    echo "LAN protected: $LAN_SUBNET via $LAN_IF (gw $LAN_GW)"
+else
+    echo "Could not detect LAN config"
+fi
+
+# Dodatkowe podsieci LAN
+if [ -n "$LAN_IF" ] && [ -n "$LAN_GW" ]; then
+    ip route replace 10.10.68.0/24 via $LAN_GW dev $LAN_IF metric 50 2>/dev/null
+    ip rule add to 10.10.68.0/24 table main prio 100 2>/dev/null
+    echo "Extra LAN protected: 10.10.68.0/24 via $LAN_GW"
+fi
+LANROUTE
+sudo chmod +x /usr/local/bin/lan-route-protect
+
+cat <<'LANSERVICE' | sudo tee /etc/systemd/system/lan-route-protect.service >/dev/null
+[Unit]
+Description=Protect LAN routing from VPN override
+After=network-online.target
+Before=AmneziaVPN.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/lan-route-protect
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+LANSERVICE
+
+sudo systemctl daemon-reload
+sudo systemctl enable lan-route-protect
 
 ###############################################################################
-# INSTALACJA USŁUGI TOR Z SOCKS PROXY
+# INSTALACJA XRDP (PRACA ZDALNA RDP)
 ###############################################################################
-echo "[5/7] Instalacja i konfiguracja usługi Tor..."
+echo "[6/9] Instalacja xrdp (dostep RDP)..."
+
+sudo apt install -y xrdp
+sudo systemctl enable xrdp
+
+# Konfiguracja xrdp do uzywania XFCE
+echo "xfce4-session" > ~/.xsession
+chmod +x ~/.xsession
+
+# Upewnienie sie ze polkit nie blokuje sesji
+cat <<'POLKIT' | sudo tee /etc/polkit-1/localauthority/50-local.d/45-allow-colord.pkla >/dev/null
+[Allow Colord all Users]
+Identity=unix-user:*
+Action=org.freedesktop.color-manager.create-device;org.freedesktop.color-manager.create-profile;org.freedesktop.color-manager.delete-device;org.freedesktop.color-manager.delete-profile;org.freedesktop.color-manager.modify-device;org.freedesktop.color-manager.modify-profile
+ResultAny=no
+ResultInactive=no
+ResultActive=yes
+POLKIT
+
+# Konfiguracja xrdp - port i bezpieczenstwo
+sudo sed -i 's/^port=.*/port=3389/' /etc/xrdp/xrdp.ini 2>/dev/null || true
+sudo sed -i 's/^#\?max_bpp=.*/max_bpp=32/' /etc/xrdp/xrdp.ini 2>/dev/null || true
+
+# Konfiguracja startwm do uruchamiania XFCE
+if ! grep -q "xfce4-session" /etc/xrdp/startwm.sh 2>/dev/null; then
+    sudo sed -i '/^test -x/i # Uruchom XFCE\nstartxfce4\nexit 0' /etc/xrdp/startwm.sh 2>/dev/null || true
+fi
+
+# Dodanie uzytkownika do grupy ssl-cert (wymagane przez xrdp)
+sudo adduser "$USER" ssl-cert 2>/dev/null || true
+
+sudo systemctl restart xrdp
+
+echo "xrdp zainstalowany. Polacz sie przez RDP na port 3389."
+
+###############################################################################
+# INSTALACJA USLUGI TOR Z SOCKS PROXY
+###############################################################################
+echo "[7/9] Instalacja i konfiguracja uslugi Tor..."
 
 sudo apt install -y tor
 
 # Konfiguracja Tor - SOCKS Proxy na 9050
-cat | sudo tee /etc/tor/torrc.d/socks.conf 2>/dev/null > /dev/null << 'TORCONFIG'
+sudo mkdir -p /etc/tor/torrc.d
+cat <<'TORCONFIG' | sudo tee /etc/tor/torrc.d/socks.conf >/dev/null
 # Socks Settings
 SocksPort 127.0.0.1:9050
 SocksListenAddress 127.0.0.1
@@ -119,90 +274,120 @@ DataDirectory /var/lib/tor
 # Bridge obfs4 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx cert=xxxxxxxxxxxx iat-mode=0
 TORCONFIG
 
-# Utworzenie katalogu i uruchomienie Tor
-sudo mkdir -p /etc/tor/torrc.d
 sudo mkdir -p /var/lib/tor
 sudo systemctl daemon-reload
-
-# Autostart Tor
 sudo systemctl enable tor
 
-echo "Usługa Tor skonfigurowana. Port SOCKS: 127.0.0.1:9050"
+echo "Usluga Tor skonfigurowana. Port SOCKS: 127.0.0.1:9050"
 
 ###############################################################################
 # INSTALACJA KLEOPATRA (GPG MANAGEMENT)
 ###############################################################################
-echo "[6/7] Instalacja narzędzi kryptograficznych..."
+echo "Instalacja narzedzi kryptograficznych..."
 
 sudo apt install -y gnupg2 gnupg-agent scdaemon dirmngr kleopatra
 
-# Wygenerowanie domyślnego configu GPG
+# Wygenerowanie domyslnego configu GPG
 mkdir -p ~/.gnupg
 chmod 700 ~/.gnupg
 
 ###############################################################################
-# INSTALACJA KEEPASSXC (MENEDŻER HASEŁ)
+# INSTALACJA KEEPASSXC (MENEDZER HASEL)
 ###############################################################################
-pipx install keepassxc 2>/dev/null || sudo apt install -y keepassxc
+sudo apt install -y keepassxc
 
 ###############################################################################
 # INSTALACJA APPS - Flatpak
-echo "[7/7] Instalacja aplikacji (Flatpak)..."
+###############################################################################
+echo "[8/9] Instalacja aplikacji (Flatpak)..."
+
+# Dodanie repozytorium Flathub jesli brak
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
 
 # Obsidian
-sudo flatpak install flathub md.obsidian.Obsidian -y
+sudo flatpak install flathub md.obsidian.Obsidian -y --noninteractive
 
-# Cryptomator (zamiast VeraCrypt - niedostępny na Debian 13)
-sudo flatpak install flathub org.cryptomator.Cryptomator -y
+# Cryptomator
+sudo flatpak install flathub org.cryptomator.Cryptomator -y --noninteractive
 
 # Monero GUI
-sudo flatpak install flathub org.getmonero.Monero -y
+sudo flatpak install flathub org.getmonero.Monero -y --noninteractive
 
-# Session - Flatpak
-sudo flatpak install flathub network.loki.Session -y
+# Session
+sudo flatpak install flathub network.loki.Session -y --noninteractive
 
 # OnionShare
-sudo flatpak install flathub org.onionshare.OnionShare -y
+sudo flatpak install flathub org.onionshare.OnionShare -y --noninteractive
 
-# Brak Amnezia VPN - nie dostępne w repozytoriach Linux
+# Tor Browser
+sudo flatpak install flathub org.torproject.torbrowser-launcher -y --noninteractive
 
-# Instalacja Brave Browser
+###############################################################################
+# INSTALACJA AMNEZIA VPN
+###############################################################################
+echo "Instalacja Amnezia VPN..."
 
-wget -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg --no-check-certificate
-echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main" | sudo tee /etc/apt/sources.list.d/brave-browser-release.list
+cd /tmp
+
+# Pobranie instalatora Amnezia (plik .tar, nie .tar.gz)
+AMNEZIA_URL="https://github.com/amnezia-vpn/amnezia-client/releases/download/4.8.14.5/AmneziaVPN_4.8.14.5_linux_x64.tar"
+wget -q "$AMNEZIA_URL" -O amnezia.tar 2>/dev/null || true
+
+if [ -f /tmp/amnezia.tar ] && [ -s /tmp/amnezia.tar ]; then
+    sudo mkdir -p /tmp/amnezia-extract
+    sudo tar -xf amnezia.tar -C /tmp/amnezia-extract/
+
+    # Uruchom instalator headless (Qt Installer Framework)
+    INSTALLER=$(find /tmp/amnezia-extract -name "*.bin" -type f 2>/dev/null | head -1)
+    if [ -n "$INSTALLER" ]; then
+        sudo chmod +x "$INSTALLER"
+        sudo QT_QPA_PLATFORM=minimal "$INSTALLER" --accept-licenses --confirm-command --default-answer install 2>/dev/null
+        echo "Amnezia VPN zainstalowany."
+    else
+        echo "UWAGA: Nie znaleziono instalatora Amnezia."
+    fi
+
+    # Wlacz serwis systemd
+    sudo cp /opt/AmneziaVPN/AmneziaVPN.service /etc/systemd/system/AmneziaVPN.service 2>/dev/null || true
+    sudo systemctl daemon-reload
+    sudo systemctl enable AmneziaVPN
+    sudo systemctl start AmneziaVPN
+
+    # Autostart klienta GUI przy logowaniu
+    mkdir -p ~/.config/autostart
+    cat > ~/.config/autostart/AmneziaVPN.desktop << 'DEOF'
+[Desktop Entry]
+Type=Application
+Name=AmneziaVPN
+Exec=/usr/local/bin/AmneziaVPN
+Icon=/opt/AmneziaVPN/AmneziaVPN.png
+Terminal=false
+Hidden=false
+X-GNOME-Autostart-enabled=true
+DEOF
+
+    rm -f /tmp/amnezia.tar
+    sudo rm -rf /tmp/amnezia-extract
+    echo "Amnezia VPN zainstalowany i wlaczony przy starcie."
+else
+    echo "UWAGA: Nie udalo sie pobrac Amnezia VPN."
+    echo "Sprobuj manualnie: $AMNEZIA_URL"
+fi
+cd ~
+
+###############################################################################
+# INSTALACJA BRAVE BROWSER
+###############################################################################
+echo "Instalacja Brave Browser..."
+
+sudo curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg \
+    https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main" \
+    | sudo tee /etc/apt/sources.list.d/brave-browser-release.list >/dev/null
+
 sudo apt update
 sudo apt install -y brave-browser
-
-# Konfiguracja Brave - ustawienia prywatności
-mkdir -p ~/.config/BraveSoftware/Brave-Browser/Default
-cat | tee ~/.config/BraveSoftware/Brave-Browser/Default/Preferences 2>/dev/null << 'BRAVECONFIG'
-{
-  "preferences": {
-    "brave": {
-      "adblock": {
-        "enabled": true
-      },
-      "shields": {
-        "block_cross_site_cookies": true,
-        "block_fingerprinting": true,
-        "block_insecure_scripts": true,
-        "block_ads": true
-      }
-    },
-    "privacy": {
-      "clear_on_exit": {
-        "cookies_and_site_data": true,
-        "cache": true
-      }
-    },
-    "privacy和安全": {
-      "block_speakers": true,
-      "block_webgl": true,
-      "first_party_storage_access": false
-    }
-  }
-}
-BRAVECONFIG
 
 ###############################################################################
 # INSTALACJA THUNDERBIRD Z GPG SUPPORT
@@ -211,190 +396,252 @@ echo "Instalacja Thunderbird..."
 
 sudo apt install -y thunderbird
 
-# Konfiguracja Thunderbird - wtyczka GPG (Enigmail)
-# Enigmail jest domyślnie zintegrowany w Nowych wersjach Thunderbird
 
 ###############################################################################
-# INSTALACJA OBSIDIAN
+# OPSEC MONITOR - IP I KRAJ W PROMPCIE
 ###############################################################################
-echo "Instalacja Obsidian..."
+echo "Konfiguracja OPSEC monitora IP..."
 
-wget -qO- https://releases.obsidian.md/desktop/Obsidian-1.4.16.deb | sudo dpkg -i -
-sudo apt install -f -y
-
-# Konfiguracja Obsidian - domyślne katalogi danych
-mkdir -p "$HOME/.local/share/obsidian"
-cat | tee ~/.config/obsidian/obsidian.json 2>/dev/null << 'OBSIDIANCONFIG'
-{
-  "installed-plugins": [
-    " Templater",
-    "Calendar",
-    "Dataview"
-  ],
-  "plugins": {
-    "workspace-layout": "default"
-  },
-  "appearance": {
-    "theme": "dark",
-    "accent-color": "#7c3aed"
-  },
-  "editor": {
-    "line-wrapping": true,
-    "font-size": 14
-  }
-}
-OBSIDIANCONFIG
-
-###############################################################################
-# KONFIGURACJA SYSTEMOWEGO PROXY TOR (SOCKS 9050)
-###############################################################################
-echo "Konfiguracja systemowego proxy przez Tor..."
-
-cat | sudo tee /etc/profile.d/tor-proxy.sh << 'PROXYCONFIG'
+# Skrypt odpytuje ifconfig.io co 30s i cachuje wynik
+cat <<'OPSECSCRIPT' | sudo tee /usr/local/bin/opsec-monitor >/dev/null
 #!/bin/bash
-# System proxy routing through Tor SOCKS
-export HTTP_PROXY="socks5h://127.0.0.1:9050"
-export HTTPS_PROXY="socks5h://127.0.0.1:9050"
-export ALL_PROXY="socks5h://127.0.0.1:9050"
-export NO_PROXY="localhost,127.0.0.1"
-PROXYCONFIG
-
-chmod +x /etc/profile.d/tor-proxy.sh
-
-###############################################################################
-# STWORZENIE PROMPTU Z INFO O IP I KRAJU (OPSEC CHECK)
-###############################################################################
-echo "Konfiguracja promptu z kontrolą wyjściowego IP..."
-
-cat | sudo tee /etc/profile.d/opsec-prompt.sh > /dev/null << 'OPSECPROMPT'
-#!/bin/bash
-# OPSEC Prompt - Pokazuje wychodzące IP i kraj
-
-get_external_info() {
-    local IP=$(curl -s --socks5 127.0.0.1:9050 https://api.ipify.org 2>/dev/null)
-    local COUNTRY=$(curl -s --socks5 127.0.0.1:9050 https://ipapi.co/$IP/country/ 2>/dev/null)
-    
-    if [ -n "$IP" ]; then
-        echo -e "\n\e[1;33m🌐 EXTERNAL IP: \e[1;32m$IP\e[0m"
-        if [ -n "$COUNTRY" ]; then
-            echo -e "📍 COUNTRY: \e[1;32m$COUNTRY\e[0m"
+CACHE_FILE="/tmp/.opsec-ip"
+while true; do
+    DATA=$(curl -s --connect-timeout 5 https://ifconfig.io/all.json 2>/dev/null)
+    if [ -n "$DATA" ]; then
+        IP=$(echo "$DATA" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ip','?'))" 2>/dev/null)
+        COUNTRY=$(echo "$DATA" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('country_code','?'))" 2>/dev/null)
+        if [ -n "$IP" ] && [ "$IP" != "?" ]; then
+            echo "${COUNTRY:-??}|${IP}" > "$CACHE_FILE"
         else
-            echo -e "📍 COUNTRY: \e[1;31mUNKNOWN\e[0m (Tor może nie być uruchomiony)"
+            echo "??|UNKNOWN" > "$CACHE_FILE"
         fi
     else
-        echo -e "\n\e[1;31m⚠️  COULD NOT FETCH IP - Tor service may not be running\e[0m"
-        echo -e "Run: sudo systemctl start tor\e[0m"
+        echo "!!|NO CONNECTION" > "$CACHE_FILE"
     fi
-    echo ""
-}
+    sleep 30
+done
+OPSECSCRIPT
+sudo chmod +x /usr/local/bin/opsec-monitor
 
-# Dodaj funkcję do_PROMPT_COMMAND
-if [ -z "$PROMPT_COMMAND" ]; then
-    PROMPT_COMMAND="get_external_info"
-else
-    PROMPT_COMMAND="get_external_info; $PROMPT_COMMAND"
-fi
+# Serwis systemd
+cat <<'OPSECSERVICE' | sudo tee /etc/systemd/system/opsec-monitor.service >/dev/null
+[Unit]
+Description=OPSEC IP Monitor
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/opsec-monitor
+Restart=always
+User=$USER
+
+[Install]
+WantedBy=multi-user.target
+OPSECSERVICE
+
+sudo systemctl daemon-reload
+sudo systemctl enable opsec-monitor
+sudo systemctl start opsec-monitor
+
+# Prompt bash - wyswietla [KRAJ IP] na zielono, lub ostrzezenie na czerwono
+mkdir -p ~/.bashrc.d
+cat <<'OPSECPROMPT' > ~/.bashrc.d/opsec-prompt.sh
+_opsec_ps1() {
+    local CACHE="/tmp/.opsec-ip"
+    if [ -f "$CACHE" ]; then
+        local DATA=$(cat "$CACHE" 2>/dev/null)
+        local COUNTRY=$(echo "$DATA" | cut -d"|" -f1)
+        local IP=$(echo "$DATA" | cut -d"|" -f2)
+        if [ "$COUNTRY" = "!!" ]; then
+            printf "\001\033[1;37;41m\002 !! NO CONNECTION !! \001\033[0m\002"
+        else
+            printf "\001\033[0;32m\002[%s %s]\001\033[0m\002" "$COUNTRY" "$IP"
+        fi
+    else
+        printf "\001\033[1;33m\002[...]\001\033[0m\002"
+    fi
+}
+PS1='$(_opsec_ps1) \[\e[1;32m\]\u@\h\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]\$ '
 OPSECPROMPT
 
-chmod +x /etc/profile.d/opsec-prompt.sh
+# Ladowanie bashrc.d
+if ! grep -q "bashrc.d" ~/.bashrc 2>/dev/null; then
+    cat <<'LOADRC' >> ~/.bashrc
+
+# Load custom configs
+for f in ~/.bashrc.d/*.sh; do
+    [ -r "$f" ] && source "$f"
+done
+LOADRC
+fi
 
 ###############################################################################
-# STWORZENIE SKRYPTU HELPERÓW
+# STWORZENIE SKRYPTU HELPERA "dint"
 ###############################################################################
-echo "Tworzenie skryptów pomocniczych..."
+echo "Tworzenie skryptu dint..."
 
-cat | tee ~/bin/darkint-helpers 2>/dev/null << 'HELPERS'
+mkdir -p ~/bin
+
+cat > ~/bin/dint << 'HELPERS'
 #!/bin/bash
-
-cd ~/darkint
 
 COMMAND="$1"
 
 case "$COMMAND" in
     check-ip)
         echo "Sprawdzanie IP..."
-        get_external_info
+        IP=$(curl -s --socks5 127.0.0.1:9050 https://api.ipify.org 2>/dev/null)
+        COUNTRY=$(curl -s --socks5 127.0.0.1:9050 https://ipapi.co/$IP/country/ 2>/dev/null)
+        echo "IP: ${IP:-UNKNOWN}"
+        echo "Country: ${COUNTRY:-UNKNOWN}"
         ;;
     help)
         cat << 'HELP'
 DarkInt Security Workstation - Helper Commands
 
 USAGE:
-  darkint-helpers <command>
+  dint <command>
 
 COMMANDS:
-  start-tor       - Uruchom usługę Tor
-  stop-tor        - Zamknij usługę Tor  
-  status-tor      - Sprawdź status Tor
+  start-tor       - Uruchom usluge Tor
+  stop-tor        - Zamknij usluge Tor
+  status-tor      - Sprawdz status Tor
   start-session   - Uruchom Session Messenger
   start-monero    - Uruchom Monero GUI Wallet
   start-amnezia   - Uruchom Amnezia VPN
-  new-identity    - Generuj nową tożsamość w Tor Browser
   backup-keys     - Backup kluczy GPG
-  check-ip        - Pokaż aktualne IP i kraj
-  help            - Pokaż tę pomoc
-
-OPSEC NOTE:
-  Twój zewnętrzny adres IP jest pokazywany automatycznie
-  w kolumnie polecenia po każdym naciśnięciu Enter.
-  Jeśli widzisz UNKNOWN - sprawdź czy Tor działa.
+  check-ip        - Pokaz aktualne IP i kraj
+  help            - Pokaz te pomoc
 HELP
-        return
         ;;
     start-tor)
-        echo "Uruchamianie usługi Tor..."
+        echo "Uruchamianie uslugi Tor..."
         sudo systemctl start tor
         echo "Tor uruchomiony. SOCKS proxy: 127.0.0.1:9050"
         ;;
     stop-tor)
-        echo "Zatrzymywanie usługi Tor..."
+        echo "Zatrzymywanie uslugi Tor..."
         sudo systemctl stop tor
         echo "Tor zatrzymany."
         ;;
+    status-tor)
+        sudo systemctl status tor
+        ;;
     start-session)
         echo "Uruchamianie Session..."
-        flatpak run network.loki.Session
+        flatpak run network.loki.Session &
         ;;
     start-monero)
         echo "Uruchamianie Monero GUI..."
-        /opt/monero-gui-linux-x64/monero-wallet-gui
+        flatpak run org.getmonero.Monero &
         ;;
     start-amnezia)
         echo "Uruchamianie Amnezia VPN..."
-        flatpak run org.amnezia.wiki 2>/dev/null || /opt/amnezia-wiki.AppImage 2>/dev/null || amnezia-wiki
-        ;;
-    new-identity)
-        echo "Generowanie nowego tożsamości w Tor Browser..."
-        flatpak run com.github.micahflee.torbrowser-launcher --new-identity
+        if [ -x /usr/local/bin/AmneziaVPN ]; then
+            /usr/local/bin/AmneziaVPN &
+        else
+            echo "Amnezia VPN nie znaleziony."
+        fi
         ;;
     backup-keys)
         echo "Backup kluczy GPG..."
-        gpg --export --armor > ~/darkint/backup/private-$(date +%Y%m%d).asc
-        gpg --export-secret-keys --armor >> ~/darkint/backup/private-$(date +%Y%m%d).asc
-        echo "Zapisano do: ~/darkint/backup/private-$(date +%Y%m%d).asc"
+        mkdir -p ~/darkint/backup
+        gpg --export --armor > ~/darkint/backup/public-$(date +%Y%m%d).asc
+        gpg --export-secret-keys --armor > ~/darkint/backup/private-$(date +%Y%m%d).asc
+        echo "Zapisano do: ~/darkint/backup/"
         ;;
     *)
-        cat << 'USAGE'
-DarkInt Helpers - Skrypt pomocniczy
-
-Użycie:
-  start-tor       - Uruchom usługę Tor
-  stop-tor        - Zamknij usługę Tor  
-  status-tor      - Sprawdź status Tor
-  start-session   - Uruchom Session Messenger
-  start-monero    - Uruchom Monero GUI Wallet
-  start-amnezia   - Uruchom Amnezia VPN
-  new-identity    - Generuj nową tożsamość w Tor Browser
-  backup-keys     - Backup kluczy GPG
-USAGE
+        echo "DarkInt Helpers - uzyj 'dint help' po liste komend"
         ;;
 esac
 HELPERS
 
-chmod +x ~/bin/darkint-helpers 2>/dev/null || mkdir -p ~/bin && chmod +x ~/bin/darkint-helpers
+chmod +x ~/bin/dint
+
+# Dodaj ~/bin do PATH jesli nie ma
+if ! grep -q 'PATH="$HOME/bin:$PATH"' ~/.bashrc 2>/dev/null; then
+    echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
+fi
 
 ###############################################################################
-# FINISH - POWIADOMIENIE
+# KONFIGURACJA PANELU DOLNEGO (DOCK) Z LAUNCHERAMI
+###############################################################################
+echo "[9/9] Konfiguracja panelu dolnego z programami..."
+
+# Panel 2 to dock na dole - zamien domyslne launchery na nasze programy
+# 15 = Brave (zamiast generycznej przegladarki)
+LAUNCHER15_FILE=$(ls ~/.config/xfce4/panel/launcher-15/*.desktop 2>/dev/null | head -1)
+if [ -n "$LAUNCHER15_FILE" ]; then
+    cat > "$LAUNCHER15_FILE" << 'DEOF'
+[Desktop Entry]
+Type=Application
+Name=Brave Browser
+Exec=brave-browser %U
+Icon=brave-browser
+Terminal=false
+Categories=Network;WebBrowser;
+DEOF
+fi
+
+# 16 = Thunderbird (zamiast appfindera)
+LAUNCHER16_FILE=$(ls ~/.config/xfce4/panel/launcher-16/*.desktop 2>/dev/null | head -1)
+if [ -n "$LAUNCHER16_FILE" ]; then
+    cat > "$LAUNCHER16_FILE" << 'DEOF'
+[Desktop Entry]
+Type=Application
+Name=Thunderbird
+Exec=thunderbird %u
+Icon=thunderbird
+Terminal=false
+Categories=Network;Email;
+DEOF
+fi
+
+# Nowe launchery: 19-26
+NEXT_ID=19
+
+create_launcher() {
+    local ID=$1 NAME=$2 EXEC=$3 ICON=$4
+    local DIR="$HOME/.config/xfce4/panel/launcher-$ID"
+    local FILENAME=$(echo "$NAME" | tr '[:upper:] ' '[:lower:]-').desktop
+    mkdir -p "$DIR"
+    cat > "$DIR/$FILENAME" << DEOF
+[Desktop Entry]
+Type=Application
+Name=$NAME
+Exec=$EXEC
+Icon=$ICON
+Terminal=false
+DEOF
+    xfconf-query -c xfce4-panel -p /plugins/plugin-$ID -s "launcher" --create -t string 2>/dev/null
+    xfconf-query -c xfce4-panel -p /plugins/plugin-$ID/items -a -s "$FILENAME" --create -t string 2>/dev/null
+}
+
+create_launcher 19 "KeePassXC"   "keepassxc %f"                           "/usr/share/icons/hicolor/256x256/apps/keepassxc.png"
+create_launcher 20 "Kleopatra"   "kleopatra"                              "/usr/share/icons/hicolor/48x48/apps/kleopatra.png"
+create_launcher 21 "Obsidian"    "flatpak run md.obsidian.Obsidian"       "/var/lib/flatpak/exports/share/icons/hicolor/512x512/apps/md.obsidian.Obsidian.png"
+create_launcher 22 "Session"     "flatpak run network.loki.Session"       "/var/lib/flatpak/exports/share/icons/hicolor/256x256/apps/network.loki.Session.png"
+create_launcher 23 "Monero GUI"  "flatpak run org.getmonero.Monero"       "/var/lib/flatpak/exports/share/icons/hicolor/256x256/apps/org.getmonero.Monero.png"
+create_launcher 24 "Cryptomator" "flatpak run org.cryptomator.Cryptomator" "/var/lib/flatpak/exports/share/icons/hicolor/scalable/apps/org.cryptomator.Cryptomator.svg"
+create_launcher 25 "OnionShare"  "flatpak run org.onionshare.OnionShare"  "/var/lib/flatpak/exports/share/icons/hicolor/scalable/apps/org.onionshare.OnionShare.svg"
+create_launcher 26 "Amnezia VPN" "/usr/local/bin/AmneziaVPN"              "/opt/AmneziaVPN/AmneziaVPN.png"
+create_launcher 27 "Tor Browser" "flatpak run org.torproject.torbrowser-launcher" "/var/lib/flatpak/exports/share/icons/hicolor/128x128/apps/org.torproject.torbrowser-launcher.png"
+
+# Zaktualizuj liste pluginow panelu 2
+# showdesktop, sep, Terminal, FileManager, Brave, TorBrowser, Thunderbird, KeePassXC, Kleopatra,
+# Obsidian, Session, Monero, Cryptomator, OnionShare, Amnezia, sep, directorymenu
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids \
+    -a -s 11 -s 12 -s 13 -s 14 -s 15 -s 27 -s 16 -s 19 -s 20 -s 21 -s 22 -s 23 -s 24 -s 25 -s 26 -s 17 -s 18 \
+    --create \
+    -t int -t int -t int -t int -t int -t int -t int -t int -t int \
+    -t int -t int -t int -t int -t int -t int -t int -t int -t int 2>/dev/null
+
+# Panel 2 widoczny (nie autohide)
+xfconf-query -c xfce4-panel -p /panels/panel-2/autohide-behavior -s 0 2>/dev/null || true
+
+###############################################################################
+# FINISH
 ###############################################################################
 echo ""
 echo "========================================="
@@ -402,38 +649,28 @@ echo "  DarkInt Security Workstation Ready!"
 echo "========================================="
 echo ""
 echo "Zainstalowane aplikacje:"
-echo "  🛡️  Tor Browser - przeglądarka z anonimizacją"
-echo "  🦁  Brave - przeglądarka z blokadą trackingu"
-echo "  📧  Thunderbird z GPG - bezpieczna poczta"
-echo "  🔐  Kleopatra - menedżer kluczy GPG"
-echo "  💾  KeePassXC - menedżer haseł"
-echo "  🔒  VeraCrypt - szyfrowanie dysków"
-echo "  💰  Monero GUI - anonimowa kryptowaluta"
-echo "  📱  Session - zdecentralizowany messenger"
-echo "  🧅  OnionShare - bezpieczne udostępnianie"
-echo "  📝  Obsidian - notatnik z szyfrowaniem"
-echo "  🌐  Amnezia VPN - szyfrowane tunele"
-echo "  🔧  Usługa Tor z SOCKS proxy (9050)"
+echo "  Tor Browser - przegladarka z anononimizacja"
+echo "  Brave - przegladarka z blokada trackingu"
+echo "  Thunderbird z GPG - bezpieczna poczta"
+echo "  Kleopatra - menedzer kluczy GPG"
+echo "  KeePassXC - menedzer hasel"
+echo "  Cryptomator - szyfrowanie plikow"
+echo "  Monero GUI - anonimowa kryptowaluta"
+echo "  Session - zdecentralizowany messenger"
+echo "  OnionShare - bezpieczne udostepnianie"
+echo "  Obsidian - notatnik"
+echo "  Amnezia VPN - szyfrowane tunele"
+echo "  Usluga Tor z SOCKS proxy (9050)"
+echo "  xrdp - dostep RDP na porcie 3389"
 echo ""
-echo "⚠️  OPSEC KONTROLA:"
-echo "  Twój zewnętrzny adres IP i kraj są pokazywane"
-echo "  automatycznie w terminalu po każdym poleceniu."
-echo "  Jeśli widzisz UNKNOWN - sprawdź czy Tor działa."
+echo "Programy dostepne na dolnym panelu (dock)"
 echo ""
 echo "Przydatne komendy:"
-echo "  darkint-helpers start-tor      - Uruchom Tor"
-echo "  darkint-helpers status-tor     - Sprawdź status Tor"
-echo "  darkint-helpers check-ip       - Sprawdź obecne IP"
-echo "  darkint-helpers new-identity   - Nowa tożsamość w Tor"
-echo "  darkint-helpers backup-keys    - Backup kluczy GPG"
-echo "  darkint-helpers help           - Pokaż pełną pomoc"
+echo "  dint help      - Pokaz pomoc"
+echo "  dint check-ip  - Sprawdz IP"
 echo ""
-echo "Pierwsze kroki:"
-echo "  1. Skonfiguruj parę kluczy GPG w Kleopatrze"
-echo "  2. Utwórz bazę haseł w KeePassXC"
-echo "  3. Skonfiguruj Monero wallet (pierwsze uruchomienie: pobranie blockchain)"
-echo "  4. Zarejestruj się w Session (nie wymaga numeru telefonu)"
-echo "  5. Skonfiguruj Obsidian z lokalnymi vaultami"
+echo "Dostep zdalny:"
+echo "  RDP: $(hostname -I 2>/dev/null | awk '{print $1}'):3389"
 echo ""
-echo "Życzymy bezpiecznej i anonimowej pracy!"
+echo "UWAGA: Wyloguj sie i zaloguj ponownie aby zastosowac motyw ciemny."
 echo ""
