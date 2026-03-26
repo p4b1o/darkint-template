@@ -645,9 +645,7 @@ Categories=Network;Email;
 DEOF
 fi
 
-# Nowe launchery: 19-26
-NEXT_ID=19
-
+# Nowe launchery: 19-27
 create_launcher() {
     local ID=$1 NAME=$2 EXEC=$3 ICON=$4
     local DIR="$HOME/.config/xfce4/panel/launcher-$ID"
@@ -661,18 +659,19 @@ Exec=$EXEC
 Icon=$ICON
 Terminal=false
 DEOF
+    # Konfiguracja pluginu jako launcher
     xfconf-query -c xfce4-panel -p /plugins/plugin-$ID -s "launcher" --create -t string 2>/dev/null
     xfconf-query -c xfce4-panel -p /plugins/plugin-$ID/items -a -s "$FILENAME" --create -t string 2>/dev/null
 }
 
-create_launcher 19 "KeePassXC"   "keepassxc %f"                          "keepassxc"
-create_launcher 20 "Kleopatra"   "kleopatra"                              "kleopatra"
+create_launcher 19 "KeePassXC"   "keepassxc %f"    "keepassxc"
+create_launcher 20 "Kleopatra"   "kleopatra"       "kleopatra"
 create_launcher 21 "Obsidian"    "flatpak run md.obsidian.Obsidian"       "obsidian"
 create_launcher 22 "Session"     "flatpak run network.loki.Session"       "session-desktop"
 create_launcher 23 "Monero GUI"  "flatpak run org.getmonero.Monero"       "monero-gui"
-create_launcher 24 "Cryptomator" "flatpak run org.cryptomator.Cryptomator" "cryptomator"
+create_launcher 24 "Cryptomator" "flatpak run org.cryptomator.Cryptomator"       "cryptomator"
 create_launcher 25 "OnionShare"  "flatpak run org.onionshare.OnionShare"  "onionshare"
-create_launcher 26 "Amnezia VPN" "/usr/local/bin/AmneziaVPN"              "/opt/AmneziaVPN/AmneziaVPN.png"
+create_launcher 26 "Amnezia VPN" "/usr/local/bin/AmneziaVPN"              "AmneziaVPN"
 create_launcher 27 "Tor Browser" "flatpak run org.torproject.torbrowser-launcher" "torbrowser"
 
 # Zaktualizuj liste pluginow panelu 2 (kolejnosc: showdesktop, sep, Terminal, FileManager, Brave, TorBrowser, Thunderbird, KeePassXC, Kleopatra, Obsidian, Session, Monero, Cryptomator, OnionShare, Amnezia, sep, directorymenu)
@@ -681,6 +680,45 @@ xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids \
 
 # Panel 2 widoczny (nie autohide)
 xfconf-query -c xfce4-panel -p /panels/panel-2/autohide-behavior -s 0 2>/dev/null || true
+
+# Restart panelu i ponowne dodanie plugin-IDs (konieczne po zmianach)
+echo "Restarting panel to apply icon changes..."
+rm -f ~/.config/xfce4/panel/panel-2.xml
+pkill xfce4-panel 2>/dev/null || true
+sleep 2
+
+# Dodaj panel-2 od nowa z pełną konfiguracją
+xfconf-query -c xfce4-panel -p /panels/panel-2/autohide -s false --create 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/size -s 32 --create 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/nrows -s 1 --create 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/position -s "p=6;x=0;y=0" --create 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/length -s 100 --create 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/position-locked -s true --create 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/autohide-behavior -s 0 --create 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/panel-rows -s 1 --create 2>/dev/null
+
+# Dodaj plugin-IDs jako kompletną listę
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -s "" --create 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 11
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 12
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 13
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 14
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 15
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 27
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 16
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 19
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 20
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 21
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 22
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 23
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 24
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 25
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 26
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 17
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 18
+
+# Uruchom panel ponownie
+xfce4-panel 2>/dev/null &
 
 ###############################################################################
 # FINISH
