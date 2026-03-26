@@ -322,9 +322,10 @@ sudo flatpak install flathub org.onionshare.OnionShare -y --noninteractive
 # Tor Browser
 sudo flatpak install flathub org.torproject.torbrowser-launcher -y --noninteractive
 
-# Zaktualizuj cache ikon (wapliwa dla Flatpak)
+# Zaktualizuj cache ikon (ważne dla Flatpak)
 sudo update-desktop-database 2>/dev/null || true
 flatpak update 2>/dev/null || true
+flatpak update-icon-caches 2>/dev/null || true
 
 ###############################################################################
 # INSTALACJA AMNEZIA VPN
@@ -622,15 +623,15 @@ DEOF
     xfconf-query -c xfce4-panel -p /plugins/plugin-$ID/items -a -s "$FILENAME" --create -t string 2>/dev/null
 }
 
-create_launcher 19 "KeePassXC"   "keepassxc %f"                          "/usr/share/icons/hicolor/256x256/apps/keepassxc.png"
-create_launcher 20 "Kleopatra"   "kleopatra"                              "/usr/share/icons/hicolor/48x48/apps/kleopatra.png"
-create_launcher 21 "Obsidian"    "flatpak run md.obsidian.Obsidian"       "md.obsidian.Obsidian"
-create_launcher 22 "Session"     "flatpak run network.loki.Session"       "network.loki.Session"
-create_launcher 23 "Monero GUI"  "flatpak run org.getmonero.Monero"       "org.getmonero.Monero"
-create_launcher 24 "Cryptomator" "flatpak run org.cryptomator.Cryptomator" "org.cryptomator.Cryptomator"
-create_launcher 25 "OnionShare"  "flatpak run org.onionshare.OnionShare"  "org.onionshare.OnionShare"
-create_launcher 26 "Amnezia VPN" "/usr/local/bin/AmneziaVPN"              "AmneziaVPN"
-create_launcher 27 "Tor Browser" "flatpak run org.torproject.torbrowser-launcher" "org.torproject.torbrowser-launcher"
+create_launcher 19 "KeePassXC"   "keepassxc %f"                          "keepassxc"
+create_launcher 20 "Kleopatra"   "kleopatra"                              "kleopatra"
+create_launcher 21 "Obsidian"    "flatpak run md.obsidian.Obsidian"       "obsidian"
+create_launcher 22 "Session"     "flatpak run network.loki.Session"       "session-desktop"
+create_launcher 23 "Monero GUI"  "flatpak run org.getmonero.Monero"       "monero-gui"
+create_launcher 24 "Cryptomator" "flatpak run org.cryptomator.Cryptomator" "cryptomator"
+create_launcher 25 "OnionShare"  "flatpak run org.onionshare.OnionShare"  "onionshare"
+create_launcher 26 "Amnezia VPN" "/usr/local/bin/AmneziaVPN"              "/opt/AmneziaVPN/AmneziaVPN.png"
+create_launcher 27 "Tor Browser" "flatpak run org.torproject.torbrowser-launcher" "torbrowser"
 
 # Zaktualizuj liste pluginow panelu 2 (kolejnosc: showdesktop, sep, Terminal, FileManager, Brave, TorBrowser, Thunderbird, KeePassXC, Kleopatra, Obsidian, Session, Monero, Cryptomator, OnionShare, Amnezia, sep, directorymenu)
 xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids \
