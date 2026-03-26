@@ -322,6 +322,10 @@ sudo flatpak install flathub org.onionshare.OnionShare -y --noninteractive
 # Tor Browser
 sudo flatpak install flathub org.torproject.torbrowser-launcher -y --noninteractive
 
+# Zaktualizuj cache ikon (wapliwa dla Flatpak)
+sudo update-desktop-database 2>/dev/null || true
+flatpak update 2>/dev/null || true
+
 ###############################################################################
 # INSTALACJA AMNEZIA VPN
 ###############################################################################
@@ -491,8 +495,8 @@ COMMAND="$1"
 case "$COMMAND" in
     check-ip)
         echo "Sprawdzanie IP..."
-        IP=$(curl -s --socks5 127.0.0.1:9050 https://api.ipify.org 2>/dev/null)
-        COUNTRY=$(curl -s --socks5 127.0.0.1:9050 https://ipapi.co/$IP/country/ 2>/dev/null)
+        IP=$(curl -s https://api.ipify.org 2>/dev/null)
+        COUNTRY=$(curl -s https://ipapi.co/$IP/country/ 2>/dev/null)
         echo "IP: ${IP:-UNKNOWN}"
         echo "Country: ${COUNTRY:-UNKNOWN}"
         ;;
@@ -618,24 +622,19 @@ DEOF
     xfconf-query -c xfce4-panel -p /plugins/plugin-$ID/items -a -s "$FILENAME" --create -t string 2>/dev/null
 }
 
-create_launcher 19 "KeePassXC"   "keepassxc %f"                           "/usr/share/icons/hicolor/256x256/apps/keepassxc.png"
+create_launcher 19 "KeePassXC"   "keepassxc %f"                          "/usr/share/icons/hicolor/256x256/apps/keepassxc.png"
 create_launcher 20 "Kleopatra"   "kleopatra"                              "/usr/share/icons/hicolor/48x48/apps/kleopatra.png"
-create_launcher 21 "Obsidian"    "flatpak run md.obsidian.Obsidian"       "/var/lib/flatpak/exports/share/icons/hicolor/512x512/apps/md.obsidian.Obsidian.png"
-create_launcher 22 "Session"     "flatpak run network.loki.Session"       "/var/lib/flatpak/exports/share/icons/hicolor/256x256/apps/network.loki.Session.png"
-create_launcher 23 "Monero GUI"  "flatpak run org.getmonero.Monero"       "/var/lib/flatpak/exports/share/icons/hicolor/256x256/apps/org.getmonero.Monero.png"
-create_launcher 24 "Cryptomator" "flatpak run org.cryptomator.Cryptomator" "/var/lib/flatpak/exports/share/icons/hicolor/scalable/apps/org.cryptomator.Cryptomator.svg"
-create_launcher 25 "OnionShare"  "flatpak run org.onionshare.OnionShare"  "/var/lib/flatpak/exports/share/icons/hicolor/scalable/apps/org.onionshare.OnionShare.svg"
-create_launcher 26 "Amnezia VPN" "/usr/local/bin/AmneziaVPN"              "/opt/AmneziaVPN/AmneziaVPN.png"
-create_launcher 27 "Tor Browser" "flatpak run org.torproject.torbrowser-launcher" "/var/lib/flatpak/exports/share/icons/hicolor/128x128/apps/org.torproject.torbrowser-launcher.png"
+create_launcher 21 "Obsidian"    "flatpak run md.obsidian.Obsidian"       "md.obsidian.Obsidian"
+create_launcher 22 "Session"     "flatpak run network.loki.Session"       "network.loki.Session"
+create_launcher 23 "Monero GUI"  "flatpak run org.getmonero.Monero"       "org.getmonero.Monero"
+create_launcher 24 "Cryptomator" "flatpak run org.cryptomator.Cryptomator" "org.cryptomator.Cryptomator"
+create_launcher 25 "OnionShare"  "flatpak run org.onionshare.OnionShare"  "org.onionshare.OnionShare"
+create_launcher 26 "Amnezia VPN" "/usr/local/bin/AmneziaVPN"              "AmneziaVPN"
+create_launcher 27 "Tor Browser" "flatpak run org.torproject.torbrowser-launcher" "org.torproject.torbrowser-launcher"
 
-# Zaktualizuj liste pluginow panelu 2
-# showdesktop, sep, Terminal, FileManager, Brave, TorBrowser, Thunderbird, KeePassXC, Kleopatra,
-# Obsidian, Session, Monero, Cryptomator, OnionShare, Amnezia, sep, directorymenu
+# Zaktualizuj liste pluginow panelu 2 (kolejnosc: showdesktop, sep, Terminal, FileManager, Brave, TorBrowser, Thunderbird, KeePassXC, Kleopatra, Obsidian, Session, Monero, Cryptomator, OnionShare, Amnezia, sep, directorymenu)
 xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids \
-    -a -s 11 -s 12 -s 13 -s 14 -s 15 -s 27 -s 16 -s 19 -s 20 -s 21 -s 22 -s 23 -s 24 -s 25 -s 26 -s 17 -s 18 \
-    --create \
-    -t int -t int -t int -t int -t int -t int -t int -t int -t int \
-    -t int -t int -t int -t int -t int -t int -t int -t int -t int 2>/dev/null
+    -s 11 -s 12 -s 13 -s 14 -s 15 -s 27 -s 16 -s 19 -s 20 -s 21 -s 22 -s 23 -s 24 -s 25 -s 26 -s 17 -s 18 2>/dev/null
 
 # Panel 2 widoczny (nie autohide)
 xfconf-query -c xfce4-panel -p /panels/panel-2/autohide-behavior -s 0 2>/dev/null || true
@@ -663,8 +662,9 @@ echo "  Amnezia VPN - szyfrowane tunele"
 echo "  Usluga Tor z SOCKS proxy (9050)"
 echo "  xrdp - dostep RDP na porcie 3389"
 echo ""
-echo "Programy dostepne na dolnym panelu (dock)"
-echo ""
+echo "Programy dostepne na dolnym panelu (dock):"
+echo "  Brave Browser | Tor Browser | Thunderbird | KeePassXC | Kleopatra"
+echo "  Obsidian | Session | Monero GUI | Cryptomator | OnionShare | Amnezia VPN"
 echo "Przydatne komendy:"
 echo "  dint help      - Pokaz pomoc"
 echo "  dint check-ip  - Sprawdz IP"
