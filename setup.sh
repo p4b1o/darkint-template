@@ -327,6 +327,48 @@ sudo update-desktop-database 2>/dev/null || true
 flatpak update 2>/dev/null || true
 flatpak update-icon-caches 2>/dev/null || true
 
+# Kopiuje ikony Flatpak do systemowego katalogu ikon XFCE
+echo "Instalowanie ikon aplikacji Flatpak..."
+
+# Obsidian (użyj 512x512 jako najwyższa jakość)
+sudo cp /var/lib/flatpak/app/md.obsidian.Obsidian/current/active/files/share/icons/hicolor/512x512/apps/md.obsidian.Obsidian.png \
+    /usr/share/icons/hicolor/256x256/apps/obsidian.png 2>/dev/null || true
+sudo cp /var/lib/flatpak/app/md.obsidian.Obsidian/current/active/files/share/icons/hicolor/512x512/apps/md.obsidian.Obsidian.png \
+    /usr/share/icons/hicolor/128x128/apps/obsidian.png 2>/dev/null || true
+sudo cp /var/lib/flatpak/app/md.obsidian.Obsidian/current/active/files/share/icons/hicolor/512x512/apps/md.obsidian.Obsidian.png \
+    /usr/share/icons/hicolor/48x48/apps/obsidian.png 2>/dev/null || true
+
+# Session Desktop
+sudo cp /var/lib/flatpak/app/network.loki.Session/current/active/files/share/icons/hicolor/64x64/apps/network.loki.Session.png \
+    /usr/share/icons/hicolor/48x48/apps/session-desktop.png 2>/dev/null || true
+
+# Cryptomator (SVG)
+sudo cp /var/lib/flatpak/app/org.cryptomator.Cryptomator/current/active/files/share/icons/hicolor/scalable/apps/org.cryptomator.Cryptomator.svg \
+    /usr/share/icons/hicolor/48x48/apps/cryptomator.svg 2>/dev/null || true
+
+# OnionShare (SVG)
+sudo cp /var/lib/flatpak/app/org.onionshare.OnionShare/current/active/files/share/icons/hicolor/scalable/apps/org.onionshare.OnionShare.svg \
+    /usr/share/icons/hicolor/48x48/apps/onionshare.svg 2>/dev/null || true
+
+# Tor Browser
+sudo cp /var/lib/flatpak/app/org.torproject.torbrowser-launcher/current/active/files/share/icons/hicolor/128x128/apps/org.torproject.torbrowser-launcher.png \
+    /usr/share/icons/hicolor/48x48/apps/torbrowser.png 2>/dev/null || true
+
+# Monero GUI (ma 48x48)
+sudo cp /var/lib/flatpak/app/org.getmonero.Monero/current/active/files/share/icons/hicolor/48x48/apps/org.getmonero.Monero.png \
+    /usr/share/icons/hicolor/48x48/apps/monero-gui.png 2>/dev/null || true
+
+# Amnezia VPN
+sudo cp /opt/AmneziaVPN/AmneziaVPN.png \
+    /usr/share/icons/hicolor/48x48/apps/AmneziaVPN.png 2>/dev/null || true
+
+# KeePassXC - użyj SVG z scalable
+cp /usr/share/icons/hicolor/scalable/apps/keepassxc.svg \
+    /usr/share/icons/hicolor/48x48/apps/keepassxc.png 2>/dev/null || true
+
+# Aktualizuj icon cache dla XFCE
+sudo gtk-update-icon-cache -f /usr/share/icons/hicolor/ 2>/dev/null || true
+
 ###############################################################################
 # INSTALACJA AMNEZIA VPN
 ###############################################################################
