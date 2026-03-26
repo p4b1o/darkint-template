@@ -358,9 +358,7 @@ sudo cp /var/lib/flatpak/app/org.torproject.torbrowser-launcher/current/active/f
 sudo cp /var/lib/flatpak/app/org.getmonero.Monero/current/active/files/share/icons/hicolor/48x48/apps/org.getmonero.Monero.png \
     /usr/share/icons/hicolor/48x48/apps/monero-gui.png 2>/dev/null || true
 
-# Amnezia VPN
-sudo cp /opt/AmneziaVPN/AmneziaVPN.png \
-    /usr/share/icons/hicolor/48x48/apps/AmneziaVPN.png 2>/dev/null || true
+# Amnezia VPN - ikona kopiowana pozniej, po instalacji (sekcja AMNEZIA VPN)
 
 # KeePassXC - użyj SVG z scalable
 cp /usr/share/icons/hicolor/scalable/apps/keepassxc.svg \
@@ -412,6 +410,10 @@ Terminal=false
 Hidden=false
 X-GNOME-Autostart-enabled=true
 DEOF
+
+    # Kopiuj ikone Amnezia do hicolor
+    sudo cp /opt/AmneziaVPN/AmneziaVPN.png \
+        /usr/share/icons/hicolor/48x48/apps/AmneziaVPN.png 2>/dev/null || true
 
     rm -f /tmp/amnezia.tar
     sudo rm -rf /tmp/amnezia-extract
@@ -674,63 +676,44 @@ create_launcher 25 "OnionShare"  "flatpak run org.onionshare.OnionShare"  "onion
 create_launcher 26 "Amnezia VPN" "/usr/local/bin/AmneziaVPN"              "AmneziaVPN"
 create_launcher 27 "Tor Browser" "flatpak run org.torproject.torbrowser-launcher" "torbrowser"
 
-# Zaktualizuj liste pluginow panelu 2 (kolejnosc: showdesktop, sep, Terminal, FileManager, Brave, TorBrowser, Thunderbird, KeePassXC, Kleopatra, Obsidian, Session, Monero, Cryptomator, OnionShare, Amnezia, sep, directorymenu)
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids \
-    -s 11 -s 12 -s 13 -s 14 -s 15 -s 27 -s 16 -s 19 -s 20 -s 21 -s 22 -s 23 -s 24 -s 25 -s 26 -s 17 -s 18 2>/dev/null
-
-# Konfiguracja panelu dolnego (dock) z launcherami
+# Zaktualizuj liste pluginow panelu 2 via xfconf-query
+# (kolejnosc: showdesktop, sep, Terminal, FileManager, Brave, TorBrowser, Thunderbird,
+#  KeePassXC, Kleopatra, Obsidian, Session, Monero, Cryptomator, OnionShare, Amnezia, sep, directorymenu)
 echo "Konfiguracja panelu dolnego (dock)..."
 
-# Zatrzymaj panel i usuń starą konfigurację
-rm -f ~/.config/xfce4/panel/panel-2.xml
-pkill xfce4-panel 2>/dev/null || true
-sleep 2
+# Usun stary plugin-ids i stworz nowy z wszystkimi 17 pluginami
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -rR 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -n \
+    -t int -s 11 \
+    -t int -s 12 \
+    -t int -s 13 \
+    -t int -s 14 \
+    -t int -s 15 \
+    -t int -s 27 \
+    -t int -s 16 \
+    -t int -s 19 \
+    -t int -s 20 \
+    -t int -s 21 \
+    -t int -s 22 \
+    -t int -s 23 \
+    -t int -s 24 \
+    -t int -s 25 \
+    -t int -s 26 \
+    -t int -s 17 \
+    -t int -s 18
 
-# Stwórz panel-2.xml ręcznie z wszystkie plugin-IDs
-mkdir -p ~/.config/xfce4/panel
-cat > ~/.config/xfce4/panel/panel-2.xml << 'PANELXML'
-<?xml version="1.0" encoding="UTF-8"?>
+# Panel dolny: wycentrowany dock, automatyczna szerokosc
+xfconf-query -c xfce4-panel -p /panels/panel-2/position -s "p=10;x=0;y=0"
+xfconf-query -c xfce4-panel -p /panels/panel-2/length -s 1
+xfconf-query -c xfce4-panel -p /panels/panel-2/length-adjust -n -t bool -s true
+xfconf-query -c xfce4-panel -p /panels/panel-2/size -s 48
+xfconf-query -c xfce4-panel -p /panels/panel-2/autohide-behavior -s 0
+xfconf-query -c xfce4-panel -p /panels/panel-2/position-locked -s true
 
-<channel name="xfce4-panel" version="1.0">
-  <property name="panels" type="array">
-    <value type="int" value="2"/>
-    <property name="panel-2" type="empty">
-      <property name="position" type="string" value="p=6;x=0;y=0"/>
-      <property name="length" type="int" value="100"/>
-      <property name="size" type="int" value="32"/>
-      <property name="nrows" type="int" value="1"/>
-      <property name="autohide" type="bool" value="false"/>
-      <property name="autohide-behavior" type="int" value="0"/>
-      <property name="position-locked" type="bool" value="true"/>
-      <property name="disabled" type="bool" value="false"/>
-      <property name="plugin-ids" type="array">
-        <value type="int" value="11"/>
-        <value type="int" value="12"/>
-        <value type="int" value="13"/>
-        <value type="int" value="14"/>
-        <value type="int" value="15"/>
-        <value type="int" value="27"/>
-        <value type="int" value="16"/>
-        <value type="int" value="19"/>
-        <value type="int" value="20"/>
-        <value type="int" value="21"/>
-        <value type="int" value="22"/>
-        <value type="int" value="23"/>
-        <value type="int" value="24"/>
-        <value type="int" value="25"/>
-        <value type="int" value="26"/>
-        <value type="int" value="17"/>
-        <value type="int" value="18"/>
-      </property>
-    </property>
-  </property>
-</channel>
-PANELXML
-
-echo "Panel-2.xml created with 17 plugins."
+echo "Panel-2 skonfigurowany z 17 pluginami (dock wycentrowany)."
 
 # Zrestartuj panel
-xfce4-panel 2>/dev/null &
+xfce4-panel -r 2>/dev/null || xfce4-panel 2>/dev/null &
 
 ###############################################################################
 # FINISH
