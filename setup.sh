@@ -681,44 +681,42 @@ xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids \
 # Panel 2 widoczny (nie autohide)
 xfconf-query -c xfce4-panel -p /panels/panel-2/autohide-behavior -s 0 2>/dev/null || true
 
-# Restart panelu i ponowne dodanie plugin-IDs (konieczne po zmianach)
-echo "Restarting panel to apply icon changes..."
+# Konfiguracja panel-2 z launcherami - reset i przebudowa
+echo "Konfiguracja panelu dolnego (dock)..."
+
+# Usuń panel-2 cache i zresetuj
 rm -f ~/.config/xfce4/panel/panel-2.xml
-pkill xfce4-panel 2>/dev/null || true
+xfconf-query -c xfce4-panel -p /panels/panel-2 -R 2>/dev/null || true
 sleep 2
 
-# Dodaj panel-2 od nowa z pełną konfiguracją
-xfconf-query -c xfce4-panel -p /panels/panel-2/autohide -s false --create 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/size -s 32 --create 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/nrows -s 1 --create 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/position -s "p=6;x=0;y=0" --create 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/length -s 100 --create 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/position-locked -s true --create 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/autohide-behavior -s 0 --create 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/panel-rows -s 1 --create 2>/dev/null
+# Dodaj panel-2 z pełną konfiguracją
+xfconf-query -c xfce4-panel -p /panels/panel-2/size -s 32 --create -t int 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/nrows -s 1 --create -t int 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/position -s "p=6;x=0;y=0" --create -t string 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/length -s 100 --create -t int 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/position-locked -s true --create -t bool 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/autohide -s false --create -t bool 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/autohide-behavior -s 0 --create -t int 2>/dev/null
+xfconf-query -c xfce4-panel -p /panels/panel-2/disabled -s false --create -t bool 2>/dev/null
 
-# Dodaj plugin-IDs jako kompletną listę
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -s "" --create 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 11
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 12
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 13
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 14
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 15
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 27
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 16
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 19
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 20
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 21
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 22
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 23
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 24
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 25
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 26
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 17
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a 18
+# Dodaj plugin-IDs jako tablicę
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids --create -t int 2>/dev/null
+for id in 11 12 13 14 15 27 16 19 20 21 22 23 24 25 26 17 18; do
+    xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a -s $id 2>/dev/null
+done
 
-# Uruchom panel ponownie
+# Zapisz panel-2.xml i zrestartuj panel
+mkdir -p ~/.config/xfce4/panel
+xfce4-panel --save 2>/dev/null || true
+pkill xfce4-panel 2>/dev/null || true
+sleep 2
 xfce4-panel 2>/dev/null &
+
+# Odczekaj i sprawdź status
+sleep 3
+echo "Panel-2 plugin-IDs:"
+xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -l 2>/dev/null | tr '\n' ' '
+echo ""
 
 ###############################################################################
 # FINISH
