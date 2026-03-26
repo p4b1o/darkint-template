@@ -678,45 +678,59 @@ create_launcher 27 "Tor Browser" "flatpak run org.torproject.torbrowser-launcher
 xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids \
     -s 11 -s 12 -s 13 -s 14 -s 15 -s 27 -s 16 -s 19 -s 20 -s 21 -s 22 -s 23 -s 24 -s 25 -s 26 -s 17 -s 18 2>/dev/null
 
-# Panel 2 widoczny (nie autohide)
-xfconf-query -c xfce4-panel -p /panels/panel-2/autohide-behavior -s 0 2>/dev/null || true
-
-# Konfiguracja panel-2 z launcherami - reset i przebudowa
+# Konfiguracja panelu dolnego (dock) z launcherami
 echo "Konfiguracja panelu dolnego (dock)..."
 
-# Usuń panel-2 cache i zresetuj
+# Zatrzymaj panel i usuń starą konfigurację
 rm -f ~/.config/xfce4/panel/panel-2.xml
-xfconf-query -c xfce4-panel -p /panels/panel-2 -R 2>/dev/null || true
-sleep 2
-
-# Dodaj panel-2 z pełną konfiguracją
-xfconf-query -c xfce4-panel -p /panels/panel-2/size -s 32 --create -t int 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/nrows -s 1 --create -t int 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/position -s "p=6;x=0;y=0" --create -t string 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/length -s 100 --create -t int 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/position-locked -s true --create -t bool 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/autohide -s false --create -t bool 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/autohide-behavior -s 0 --create -t int 2>/dev/null
-xfconf-query -c xfce4-panel -p /panels/panel-2/disabled -s false --create -t bool 2>/dev/null
-
-# Dodaj plugin-IDs jako tablicę
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids --create -t int 2>/dev/null
-for id in 11 12 13 14 15 27 16 19 20 21 22 23 24 25 26 17 18; do
-    xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -a -s $id 2>/dev/null
-done
-
-# Zapisz panel-2.xml i zrestartuj panel
-mkdir -p ~/.config/xfce4/panel
-xfce4-panel --save 2>/dev/null || true
 pkill xfce4-panel 2>/dev/null || true
 sleep 2
-xfce4-panel 2>/dev/null &
 
-# Odczekaj i sprawdź status
-sleep 3
-echo "Panel-2 plugin-IDs:"
-xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids -l 2>/dev/null | tr '\n' ' '
-echo ""
+# Stwórz panel-2.xml ręcznie z wszystkie plugin-IDs
+mkdir -p ~/.config/xfce4/panel
+cat > ~/.config/xfce4/panel/panel-2.xml << 'PANELXML'
+<?xml version="1.0" encoding="UTF-8"?>
+
+<channel name="xfce4-panel" version="1.0">
+  <property name="panels" type="array">
+    <value type="int" value="2"/>
+    <property name="panel-2" type="empty">
+      <property name="position" type="string" value="p=6;x=0;y=0"/>
+      <property name="length" type="int" value="100"/>
+      <property name="size" type="int" value="32"/>
+      <property name="nrows" type="int" value="1"/>
+      <property name="autohide" type="bool" value="false"/>
+      <property name="autohide-behavior" type="int" value="0"/>
+      <property name="position-locked" type="bool" value="true"/>
+      <property name="disabled" type="bool" value="false"/>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="11"/>
+        <value type="int" value="12"/>
+        <value type="int" value="13"/>
+        <value type="int" value="14"/>
+        <value type="int" value="15"/>
+        <value type="int" value="27"/>
+        <value type="int" value="16"/>
+        <value type="int" value="19"/>
+        <value type="int" value="20"/>
+        <value type="int" value="21"/>
+        <value type="int" value="22"/>
+        <value type="int" value="23"/>
+        <value type="int" value="24"/>
+        <value type="int" value="25"/>
+        <value type="int" value="26"/>
+        <value type="int" value="17"/>
+        <value type="int" value="18"/>
+      </property>
+    </property>
+  </property>
+</channel>
+PANELXML
+
+echo "Panel-2.xml created with 17 plugins."
+
+# Zrestartuj panel
+xfce4-panel 2>/dev/null &
 
 ###############################################################################
 # FINISH
