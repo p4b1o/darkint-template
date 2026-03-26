@@ -2,11 +2,6 @@
 
 <div align="center">
 
-![DarkInt Security](https://img.shields.io/badge/DarkInt-Security%20Workstation-black?style=for-the-badge)
-![Version](https://img.shields.io/badge/version-1.0.0-green?style=for-the-badge)
-![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)
-![Platform](https://img.shields.io/badge/platform-Debian%2012%20%7C%2013-red?style=for-the-badge)
-
 **Polska stacja robocza dla analityków bezpieczeństwa i operacji tajnych**
 
 *Automatyczna instalacja i konfiguracja środowiska worklowego z naciskiem na prywatność, kryptografię i anonimizację*
