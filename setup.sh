@@ -748,5 +748,7 @@ echo ""
 echo "Dostep zdalny:"
 echo "  RDP: $(hostname -I 2>/dev/null | awk '{print $1}'):3389"
 echo ""
-echo "UWAGA: Wyloguj sie i zaloguj ponownie aby zastosowac motyw ciemny."
+echo "System zostanie zrestartowany za 10 sekund..."
 echo ""
+sleep 10
+sudo reboot
