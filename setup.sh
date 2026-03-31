@@ -228,6 +228,9 @@ POLKIT
 sudo sed -i 's/^port=.*/port=3389/' /etc/xrdp/xrdp.ini 2>/dev/null || true
 sudo sed -i 's/^#\?max_bpp=.*/max_bpp=32/' /etc/xrdp/xrdp.ini 2>/dev/null || true
 
+# Sekcja [Xorg] wymaga port=-1 (unix socket do sesman)
+sudo sed -i '/^\[Xorg\]/,/^\[/{s/^port=.*/port=-1/}' /etc/xrdp/xrdp.ini 2>/dev/null || true
+
 # Konfiguracja startwm do uruchamiania XFCE
 if ! grep -q "xfce4-session" /etc/xrdp/startwm.sh 2>/dev/null; then
     sudo sed -i '/^test -x/i # Uruchom XFCE\nstartxfce4\nexit 0' /etc/xrdp/startwm.sh 2>/dev/null || true
@@ -237,6 +240,12 @@ fi
 sudo adduser "$USER" ssl-cert 2>/dev/null || true
 
 sudo systemctl restart xrdp
+
+# Pozwol na uruchamianie Xorg przez xrdp (nie tylko z konsoli)
+sudo sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config 2>/dev/null || true
+if ! grep -q "needs_root_rights" /etc/X11/Xwrapper.config 2>/dev/null; then
+    echo "needs_root_rights=yes" | sudo tee -a /etc/X11/Xwrapper.config >/dev/null
+fi
 
 echo "xrdp zainstalowany. Polacz sie przez RDP na port 3389."
 
