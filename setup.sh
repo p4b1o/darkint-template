@@ -456,7 +456,7 @@ cat <<'OPSECSCRIPT' | sudo tee /usr/local/bin/opsec-monitor >/dev/null
 #!/bin/bash
 CACHE_FILE="/tmp/.opsec-ip"
 while true; do
-    DATA=$(curl -s --connect-timeout 5 https://ifconfig.io/all.json 2>/dev/null)
+    DATA=$(curl -4 -s --connect-timeout 5 https://ifconfig.io/all.json 2>/dev/null)
     if [ -n "$DATA" ]; then
         IP=$(echo "$DATA" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ip','?'))" 2>/dev/null)
         COUNTRY=$(echo "$DATA" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('country_code','?'))" 2>/dev/null)
@@ -474,7 +474,7 @@ OPSECSCRIPT
 sudo chmod +x /usr/local/bin/opsec-monitor
 
 # Serwis systemd
-cat <<'OPSECSERVICE' | sudo tee /etc/systemd/system/opsec-monitor.service >/dev/null
+cat <<OPSECSERVICE | sudo tee /etc/systemd/system/opsec-monitor.service >/dev/null
 [Unit]
 Description=OPSEC IP Monitor
 After=network.target
@@ -714,6 +714,65 @@ echo "Panel-2 skonfigurowany z 17 pluginami (dock wycentrowany)."
 
 # Zrestartuj panel
 xfce4-panel -r 2>/dev/null || xfce4-panel 2>/dev/null &
+
+###############################################################################
+# INSTALACJA I KONFIGURACJA OPENCODE
+###############################################################################
+echo "Instalacja OpenCode..."
+
+# Instalacja opencode
+curl -fsSL https://opencode.ai/install | bash 2>/dev/null || true
+
+# Dodanie opencode do PATH
+if ! grep -q "opencode" ~/.bashrc 2>/dev/null; then
+    echo '' >> ~/.bashrc
+    echo '# opencode' >> ~/.bashrc
+    echo 'export PATH=/home/darkint/.opencode/bin:$PATH' >> ~/.bashrc
+fi
+export PATH=/home/darkint/.opencode/bin:$PATH
+
+# Konfiguracja opencode - Ollama z modelem qwen3.5-abliterated
+mkdir -p ~/.config/opencode
+cat > ~/.config/opencode/opencode.json << 'OPENCODECONFIG'
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "ollama/huihui_ai/qwen3.5-abliterated:122b",
+  "small_model": "ollama/huihui_ai/qwen3.5-abliterated:122b",
+  "share": "disabled",
+  "enabled_providers": ["ollama"],
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local)",
+      "options": {
+        "baseURL": "http://10.10.10.1:11434/v1"
+      },
+      "models": {
+        "huihui_ai/qwen3.5-abliterated:122b": {
+          "name": "qwen3.5-abliterated:122b"
+        }
+      }
+    }
+  },
+  "permission": {
+    "question": "allow",
+    "websearch": "ask",
+    "list": "allow",
+    "glob": "allow",
+    "edit": "allow",
+    "bash": "allow",
+    "webfetch": "allow"
+  },
+  "autoupdate": false
+}
+OPENCODECONFIG
+
+# Instalacja pluginow opencode
+cd ~/.opencode 2>/dev/null && bun install @opencode-ai/plugin 2>/dev/null || true
+cd ~/.config/opencode 2>/dev/null && bun install @opencode-ai/plugin 2>/dev/null || true
+cd ~
+
+echo "OpenCode skonfigurowany z Ollama provider."
 
 ###############################################################################
 # FINISH
